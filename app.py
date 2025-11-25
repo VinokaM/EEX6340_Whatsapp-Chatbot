@@ -2,8 +2,12 @@ from flask import Flask, request, jsonify
 import requests
 import os
 from dotenv import load_dotenv
+from flask_migrate import Migrate
 
 from Whatsapp.sendMessage import send_whatsapp_message
+from models.allModels import db
+from config.DBconfig import SQLALCHEMY_DATABASE_URI
+from Whatsapp.intent_router import route_intent
 
 load_dotenv()
 
@@ -12,6 +16,12 @@ app = Flask(__name__)
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 VERIFY_TOKEN    = os.getenv('VERIFY_TOKEN')
+
+app.config['SQLALCHEMY_DATABASE_URI'] = SQLALCHEMY_DATABASE_URI
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+db.init_app(app)
+migrate = Migrate(app, db)
 
 def get_llama_response(user_message):
     headers = {
@@ -39,7 +49,7 @@ def verify():
         return request.args.get("hub.challenge")
     return "Verification failed", 403
 
-# Endpoint to receive messages (later from WhatsApp)
+
 @app.route("/chat", methods=["POST"])
 def chat():
     incoming_data = request.json
@@ -61,13 +71,10 @@ def chat():
     
     print(f"User Messge Received from webhook : {user_message}")
 
-    data = request.get_json()
 
-    user_msg = data.get("message")
+    # bot_reply = get_llama_response(user_message)
+    bot_reply = route_intent(user_message, phone_number)
 
-    bot_reply = get_llama_response(user_message)
-
-    # return jsonify({"reply": bot_reply})
     return send_whatsapp_message(phone_number, bot_reply)
 
 if __name__ == "__main__":
