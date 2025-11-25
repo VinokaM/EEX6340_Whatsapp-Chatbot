@@ -1,19 +1,35 @@
 
-
+from Whatsapp.llm_service import get_llama_response
 
 def classify_intent(user_message):
-    msg = user_message.lower()
 
-    if "all product" in msg or "products" in msg or "show products" in msg:
+    prompt = f"""
+    You are an intent detection AI for an e-commerce WhatsApp chatbot.
+
+    User message: "{user_message}"
+
+    Classify the message into ONLY ONE of the following intents:
+
+    1. view_products — user wants to see available products
+    2. view_orders — user wants to check previous or current orders
+    3. return_policy — user asks about refund, returns, or exchanges
+    4. make_order — user wants to buy or order a product
+    5. fallback — anything else
+
+    Respond only with the intent name (for example: view_products).
+    """
+
+    intent = get_llama_response(prompt).lower().strip()
+
+    
+    if "product" in intent:
         return "view_products"
-
-    if "my orders" in msg or "previous order" in msg or "order history" in msg:
+    if "order" in intent:
         return "view_orders"
-
-    if "return policy" in msg or "refund" in msg or "can i return" in msg:
+    if "return" in intent or "refund" in intent:
         return "return_policy"
-
-    if "order" in msg and ("buy" in msg or "purchase" in msg):
+    if "buy" in intent or "purchase" in intent or "make" in intent:
         return "make_order"
 
     return "fallback"
+
